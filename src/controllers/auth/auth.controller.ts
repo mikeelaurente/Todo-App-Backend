@@ -6,11 +6,16 @@ import { Request, Response } from "express";
 // Register an Account
 export const register = async (req: Request, res: Response) => {
   // Get data from body
-  const { username, email, password } = req.body;
+  const { username, email, password, confirmPassword } = req.body;
 
   // Check if data exists
-  if (!username || !email || !password) {
+  if (!username || !email || !password || !confirmPassword) {
     throw new AppError("All fields are required.", 400);
+  }
+
+  // Check if password and confirm password match
+  if (password !== confirmPassword) {
+    throw new AppError("Password and Confirm Password do not match.", 400);
   }
 
   // Find existing email
