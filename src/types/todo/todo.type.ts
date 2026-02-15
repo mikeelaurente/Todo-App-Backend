@@ -1,15 +1,19 @@
-import { Document, Types } from "mongoose";
+import { Document } from 'mongoose';
 
 export type TodoType = {
-  userEmail: string;
   title: string;
-  description: string;
-  status: string;
+  description?: string;
+  status: 'pending' | 'completed';
+  userId: string;
 };
 
 export type TodoFilterType = Partial<TodoType>;
 
-export type TodoDocumentType = TodoType &
-  Document & {
-    _id: Types.ObjectId;
-  };
+export type TodoDocumentType = TodoType & Document;
+
+export type TodoQueryType = {
+  search?: string;
+  page?: number;
+  limit?: number;
+  status?: 'pending' | 'completed';
+};

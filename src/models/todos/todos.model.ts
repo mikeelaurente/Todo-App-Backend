@@ -1,0 +1,25 @@
+import { TodoDocumentType } from '@/types/todo/todo.type';
+import { Model, model, Schema } from 'mongoose';
+
+const TodoSchema = new Schema<TodoDocumentType>(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: '' },
+    status: {
+      type: String,
+      enum: ['pending', 'completed'],
+      default: 'pending',
+    },
+    userId: { type: String, required: true },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const Todo: Model<TodoDocumentType> = model<
+  TodoDocumentType,
+  Model<TodoDocumentType>
+>('todos', TodoSchema);
+
+export default Todo;
