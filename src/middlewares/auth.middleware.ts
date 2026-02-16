@@ -1,8 +1,8 @@
-import { findAccountS } from "@/services/auth/auth.service";
-import { compareHashed } from "@/utils/bycrypt";
-import { AppError } from "@/utils/error/app-error.utils";
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from 'express';
+import { findAccountS } from '@/services/auth/auth.service';
+import { compareHashed } from '@/utils/bycrypt';
 
+// Authentication Middleware: Basic Auth
 export const authMiddleware = async (
   req: Request,
   res: Response,
@@ -10,34 +10,29 @@ export const authMiddleware = async (
 ) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Basic")) {
-    throw new AppError("Unauthorized. Missing authorization header.", 401);
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const base64Credentials = authHeader.split(" ")[1];
-
-  console.log("AUTH HEADER:", authHeader);
-  console.log("BASE64:", base64Credentials);
-
-  const decoded = Buffer.from(base64Credentials, "base64").toString("utf-8");
-
-  const [email, password] = decoded.split(":");
-
-  if (!email || !password) {
-    throw new AppError("Invalid Authorization format.", 401);
-  }
+  const base64 = authHeader.split(' ')[1];
+  const decoded = Buffer.from(base64, 'base64').toString('utf-8');
+  const [email, password] = decoded.split(':');
 
   const account = await findAccountS({ email });
+
   if (!account) {
-    throw new AppError(`Account with email ${email} not found.`, 404);
+    return res.status(401).json({ message: 'Invalid credentials' });
   }
 
-  const passwordCorrect = await compareHashed(password, account.password);
-  if (!passwordCorrect) {
-    throw new AppError("Invalid Credentials.", 401);
+  if (!(await compareHashed(password, account.password))) {
+    return res.status(401).json({ message: 'Invalid credentials' });
   }
 
-  (req as any).user = account;
+  (req as any).user = {
+    _id: account._id,
+    username: account.username,
+    email: account.email,
+  };
 
   next();
 };

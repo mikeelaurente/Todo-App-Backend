@@ -1,7 +1,7 @@
-import { findAccountS, registerAccountS } from "@/services/auth/auth.service";
-import { compareHashed, hashedValue } from "@/utils/bycrypt";
-import { AppError } from "@/utils/error/app-error.utils";
-import { Request, Response } from "express";
+import { findAccountS, registerAccountS } from '@/services/auth/auth.service';
+import { compareHashed, hashedValue } from '@/utils/bycrypt';
+import { AppError } from '@/utils/error/app-error.utils';
+import { Request, Response } from 'express';
 
 // Register an Account
 export const register = async (req: Request, res: Response) => {
@@ -10,17 +10,17 @@ export const register = async (req: Request, res: Response) => {
 
   // Check if data exists
   if (!username || !email || !password || !confirmPassword) {
-    throw new AppError("All fields are required.", 400);
+    throw new AppError('All fields are required.', 400);
   }
 
   // Check if password and confirm password match
   if (password !== confirmPassword) {
-    throw new AppError("Password and Confirm Password do not match.", 400);
+    throw new AppError('Password and Confirm Password do not match.', 400);
   }
 
   // Find existing email
   if (await findAccountS({ email })) {
-    throw new AppError("Email already exists.", 409);
+    throw new AppError('Email already exists.', 409);
   }
 
   // Hash password
@@ -35,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
 
   // return response
   res.status(200).json({
-    message: "Registered succesfully.",
+    message: 'Registered succesfully.',
     newAccount,
   });
 };
@@ -47,24 +47,28 @@ export const login = async (req: Request, res: Response) => {
 
   // Check if data exists
   if (!email || !password) {
-    throw new AppError("All fields are required", 400);
+    throw new AppError('All fields are required', 400);
   }
 
   // Find Account
   const account = await findAccountS({ email });
   if (!account) {
-    throw new AppError("Account not Found.", 404);
+    throw new AppError('Account not Found.', 404);
   }
 
   // Check password
   if (!(await compareHashed(password, account.password))) {
-    throw new AppError("Incorrect Password", 400);
+    throw new AppError('Incorrect Password', 400);
   }
 
   // Return response
   res.status(200).json({
-    message: "Login successfully.",
-    account,
+    message: 'Login successfully.',
+    user: {
+      _id: account._id,
+      username: account.username,
+      email: account.email,
+    },
   });
 };
 
@@ -75,18 +79,28 @@ export const logout = async (req: Request, res: Response) => {
 
   // Check if data exists
   if (!email) {
-    throw new AppError("All fields are required.", 400);
+    throw new AppError('All fields are required.', 400);
   }
 
   // Find Account
   const account = await findAccountS({ email });
   if (!account) {
-    throw new AppError("User not found.", 404);
+    throw new AppError('User not found.', 404);
   }
 
   // Return response
   res.status(200).json({
-    message: "Logout successfully.",
+    message: 'Logout successfully.',
     account,
+  });
+};
+
+// Get Me
+export const getMe = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  res.status(200).json({
+    message: 'User fetched successfully',
+    user,
   });
 };
