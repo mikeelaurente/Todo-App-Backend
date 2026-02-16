@@ -67,13 +67,15 @@ export const createTodo = async (req: Request, res: Response) => {
   const { title, description } = req.body;
   const userId = (req as any).user.id;
 
-  if (!title) {
+  const trimmedTitle = title?.trim();
+
+  if (!trimmedTitle) {
     throw new AppError("Title is required.", 400);
   }
 
   const todo = await createTodoS({
-    title,
-    description: description || "",
+    title: trimmedTitle,
+    description: description?.trim() || "",
     status: "pending",
     userId,
   });
