@@ -4,6 +4,7 @@ import {
   TodoQueryType,
   TodoType,
 } from "@/types/todo/todo.type";
+import { Types } from "mongoose";
 
 export const getTodosS = async (
   userId: string,
@@ -14,7 +15,9 @@ export const getTodosS = async (
   const search = query.search?.trim();
   const status = query.status;
 
-  const filter: Record<string, any> = { userId };
+  const filter: Record<string, unknown> = {
+    userId: new Types.ObjectId(userId),
+  };
 
   if (status) {
     filter.status = status;
@@ -27,7 +30,15 @@ export const getTodosS = async (
   const skip = (page - 1) * limit;
 
   const [todos, total] = await Promise.all([
-    Todo.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+    Todo.find(filter)
+      .sort({
+        isPinned: -1,
+        pinnedAt: 1,
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .exec(),
     Todo.countDocuments(filter),
   ]);
 
@@ -38,13 +49,17 @@ export const getTodoByIdS = async (
   id: string,
   userId: string,
 ): Promise<TodoDocumentType | null> => {
-  const todo = await Todo.findOne({ _id: id, userId }).exec();
-  return todo as TodoDocumentType | null;
+  return await Todo.findOne({
+    _id: new Types.ObjectId(id),
+    userId: new Types.ObjectId(userId),
+  }).exec();
 };
 
 export const createTodoS = async (data: TodoType) => {
-  const newTodo = await Todo.create(data);
-  return newTodo;
+  return await Todo.create({
+    ...data,
+    userId: new Types.ObjectId(data.userId),
+  });
 };
 
 export const updateTodoS = async (
@@ -52,16 +67,19 @@ export const updateTodoS = async (
   userId: string,
   data: Partial<TodoType>,
 ) => {
-  const updatedTodo = await Todo.findOneAndUpdate({ _id: id, userId }, data, {
-    returnDocument: "after",
-  }).exec();
-  return updatedTodo;
+  return await Todo.findOneAndUpdate(
+    {
+      _id: new Types.ObjectId(id),
+      userId: new Types.ObjectId(userId),
+    },
+    data,
+    { returnDocument: "after" },
+  ).exec();
 };
 
 export const deleteTodoS = async (id: string, userId: string) => {
-  const deletedTodo = await Todo.findOneAndDelete({
-    _id: id,
-    userId,
+  return await Todo.findOneAndDelete({
+    _id: new Types.ObjectId(id),
+    userId: new Types.ObjectId(userId),
   }).exec();
-  return deletedTodo;
 };
