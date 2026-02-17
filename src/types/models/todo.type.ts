@@ -1,16 +1,16 @@
-import { Types } from "mongoose";
+import { Types } from 'mongoose';
 
 export type TodoQueryType = {
   search?: string;
-  page?: number;
+  cursor?: string;
   limit?: number;
-  status?: "pending" | "completed";
+  status?: 'pending' | 'completed';
 };
 
 export interface TodoType {
   title: string;
   description?: string;
-  status: "pending" | "completed";
+  status: 'pending' | 'completed';
   userId: Types.ObjectId;
   isPinned: boolean;
   pinnedAt: Date | null;

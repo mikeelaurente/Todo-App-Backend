@@ -1,14 +1,14 @@
-import { NextFunction, Request, Response } from "express";
-import { AppError } from "../utils/error/app-error.utils";
+import { NextFunction, Request, Response } from 'express';
+import { AppError } from '../utils/error/app-error.util';
 export const globalErrorHandler = (
   err: any,
   req: Request,
   res: Response,
   _next: NextFunction,
 ) => {
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = process.env.NODE_ENV === 'development';
   let statusCode = err.statusCode || 500;
-  let message = err.message || "Something went wrong.";
+  let message = err.message || 'Something went wrong.';
   // Handle AppError
   if (err instanceof AppError) {
     statusCode = err.statusCode; // Custom status code from AppError

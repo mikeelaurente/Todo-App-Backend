@@ -1,19 +1,23 @@
-import Todo from "@/models/todos/todos.model";
+import Todo from '@/models/todos/todos.model';
 import {
   TodoDocumentType,
   TodoQueryType,
   TodoType,
-} from "@/types/todo/todo.type";
-import { Types } from "mongoose";
+} from '@/types/models/todo.type';
+import { Types } from 'mongoose';
 
 export const getTodosS = async (
   userId: string,
   query: TodoQueryType,
-): Promise<{ todos: TodoDocumentType[]; total: number }> => {
-  const page = Math.max(1, Number(query.page) || 1);
+): Promise<{
+  todos: TodoDocumentType[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}> => {
   const limit = Math.max(1, Number(query.limit) || 10);
   const search = query.search?.trim();
   const status = query.status;
+  const cursor = query.cursor;
 
   const filter: Record<string, unknown> = {
     userId: new Types.ObjectId(userId),
@@ -24,25 +28,30 @@ export const getTodosS = async (
   }
 
   if (search) {
-    filter.title = { $regex: search, $options: "i" };
+    filter.title = { $regex: search, $options: 'i' };
   }
 
-  const skip = (page - 1) * limit;
+  // If cursor exists, add it to the filter to get items after the cursor
+  if (cursor) {
+    filter._id = { $lt: new Types.ObjectId(cursor) };
+  }
 
-  const [todos, total] = await Promise.all([
-    Todo.find(filter)
-      .sort({
-        isPinned: -1,
-        pinnedAt: 1,
-        createdAt: -1,
-      })
-      .skip(skip)
-      .limit(limit)
-      .exec(),
-    Todo.countDocuments(filter),
-  ]);
+  // Fetch one extra item to determine if there are more items
+  const todos = await Todo.find(filter)
+    .sort({
+      isPinned: -1,
+      pinnedAt: 1,
+      createdAt: -1,
+    })
+    .limit(limit + 1)
+    .exec();
 
-  return { todos: todos as TodoDocumentType[], total };
+  const hasMore = todos.length > limit;
+  const items = todos.slice(0, limit) as TodoDocumentType[];
+  const nextCursor =
+    items.length > 0 ? items[items.length - 1]._id.toString() : null;
+
+  return { todos: items, hasMore, nextCursor };
 };
 
 export const getTodoByIdS = async (
@@ -73,7 +82,7 @@ export const updateTodoS = async (
       userId: new Types.ObjectId(userId),
     },
     data,
-    { returnDocument: "after" },
+    { returnDocument: 'after' },
   ).exec();
 };
 

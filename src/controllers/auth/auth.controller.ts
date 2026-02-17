@@ -1,106 +1,140 @@
-import { findAccountS, registerAccountS } from '@/services/auth/auth.service';
-import { compareHashed, hashedValue } from '@/utils/bycrypt';
-import { AppError } from '@/utils/error/app-error.utils';
+// libraries
 import { Request, Response } from 'express';
+import { v4 as uuid } from 'uuid';
+// Models
+import Account from '@/models/account/account.model';
+// Services
+import {
+  findAccountS,
+  pushSessionS,
+  registerAccountS,
+} from '@/services/account/account.service';
+// Utils
+import { compareHashed, hashedValue } from '@/utils/bcrypt/bycrypt.util';
+import {
+  clearRefreshCookie,
+  REFRESH_COOKIE_NAME,
+  setRefreshCookie,
+} from '@/utils/cookie/cookie.util';
+import { AppError } from '@/utils/error/app-error.util';
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from '@/utils/jwt/jwt.util';
+import { buildSession } from '@/utils/session/session.util';
 
-// Register an Account
 export const register = async (req: Request, res: Response) => {
-  // Get data from body
-  const { username, email, password, confirmPassword } = req.body;
+  // Get the data from request body
+  const { username, email, password } = req.body;
 
-  // Check if data exists
-  if (!username || !email || !password || !confirmPassword) {
-    throw new AppError('All fields are required.', 400);
-  }
+  // Validate the data
+  if (!username) throw new AppError('Name is required.', 400);
+  if (!email) throw new AppError('Email is required.', 400);
+  if (!password) throw new AppError('Password is required.', 400);
 
-  // Check if password and confirm password match
-  if (password !== confirmPassword) {
-    throw new AppError('Password and Confirm Password do not match.', 400);
-  }
+  // Check if the email already exist
+  if (await findAccountS({ email }))
+    throw new AppError('Email already exist.', 409);
 
-  // Find existing email
-  if (await findAccountS({ email })) {
-    throw new AppError('Email already exists.', 409);
-  }
-
-  // Hash password
-  const hashedPassword = await hashedValue(password);
-
-  // Create Account
-  const newAccount = await registerAccountS({
+  // Create the account
+  const account = await registerAccountS({
     username,
     email,
-    password: hashedPassword,
+    password: await hashedValue(password),
   });
+  if (!account) throw new AppError('Failed to create account.', 500);
 
-  // return response
-  res.status(200).json({
-    message: 'Registered succesfully.',
-    newAccount,
+  // Get uuid
+  const sid = uuid();
+
+  // Generate tokens
+  const sub = String(account._id);
+  const accessToken = signAccessToken(sub);
+  const refreshToken = signRefreshToken(sub, sid);
+
+  // Build session and save it in database
+  const session = await buildSession(req, refreshToken, sid);
+
+  // Push the session to database
+  const updated = await pushSessionS(String(account._id), session);
+  if (!updated) throw new AppError('Account not found.', 404);
+
+  // Set the refresh token in cookie
+  setRefreshCookie(res, refreshToken);
+
+  // Send response
+  return res.status(200).json({
+    message: 'Account registered successfully.',
+    accessToken,
   });
 };
 
-// Login Account
 export const login = async (req: Request, res: Response) => {
-  //Get data from body
+  // Get the data from request body
   const { email, password } = req.body;
 
-  // Check if data exists
-  if (!email || !password) {
-    throw new AppError('All fields are required', 400);
-  }
+  // Validate the data
+  if (!email) throw new AppError('Email is required.', 400);
+  if (!password) throw new AppError('Password is required.', 400);
 
-  // Find Account
+  // Find the account by email
   const account = await findAccountS({ email });
-  if (!account) {
-    throw new AppError('Account not Found.', 404);
-  }
+  if (!account) throw new AppError('Account not found.', 404);
 
-  // Check password
-  if (!(await compareHashed(password, account.password))) {
-    throw new AppError('Incorrect Password', 400);
-  }
+  // Compare the password with the hashed password in database
+  const ok = await compareHashed(password, account.password);
+  if (!ok) throw new AppError('Incorrect password.', 400);
 
-  // Return response
-  res.status(200).json({
+  // Get uuid
+  const sid = uuid();
+
+  // Generate tokens
+  const sub = String(account._id);
+  const accessToken = signAccessToken(sub);
+  const refreshToken = signRefreshToken(sub, sid);
+
+  // Build session and save it in database
+  const session = await buildSession(req, refreshToken, sid);
+
+  // Push the session to database
+  const updated = await pushSessionS(String(account._id), session);
+  if (!updated) throw new AppError('Account not found.', 404);
+
+  // Set the refresh token in cookie
+  setRefreshCookie(res, refreshToken);
+
+  // Send response
+  return res.status(200).json({
     message: 'Login successfully.',
-    user: {
-      _id: account._id,
-      username: account.username,
-      email: account.email,
-    },
+    accessToken,
   });
 };
 
-// Logout Account
 export const logout = async (req: Request, res: Response) => {
-  //Get data from body
-  const email = req.body.email;
+  // Get the refresh token from cookie
+  const token = req.cookies?.[REFRESH_COOKIE_NAME];
 
-  // Check if data exists
-  if (!email) {
-    throw new AppError('All fields are required.', 400);
+  // Revoke the refresh token by removing the session from database
+  if (token) {
+    try {
+      const payload = verifyRefreshToken(token) as { sub: string; sid: string };
+
+      // revoke ONLY this session (preferred)
+      await Account.updateOne(
+        { _id: payload.sub },
+        { $pull: { sessions: { sid: payload.sid } } },
+      );
+    } catch (err) {
+      // log only in development
+      if (process.env.NODE_ENV !== 'production')
+        console.error('Logout verify failed:', err);
+    }
   }
 
-  // Find Account
-  const account = await findAccountS({ email });
-  if (!account) {
-    throw new AppError('User not found.', 404);
-  }
+  // Clear the refresh token cookie
+  clearRefreshCookie(res);
 
-  // Return response
-  res.status(200).json({
-    message: 'Logout successfully.',
-    account,
-  });
-};
-
-// Get Me
-export const getMe = async (req: Request, res: Response) => {
-  const user = (req as any).user;
-
-  res.status(200).json({
-    message: 'User fetched successfully',
-    user,
-  });
+  // Send response
+  return res.status(200).json({ message: 'Logged out successfully.' });
 };

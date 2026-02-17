@@ -5,12 +5,13 @@ import {
   getTodos,
   updateTodo,
 } from '@/controllers/todos/todos.controller';
+import { requireAccessToken } from '@/middlewares/token.middleware';
 import { Router } from 'express';
 
 export const todosRouter = Router();
 
-todosRouter.get('/', getTodos);
-todosRouter.get('/:id', getTodoById);
-todosRouter.post('/', createTodo);
-todosRouter.put('/:id', updateTodo);
-todosRouter.delete('/:id', deleteTodo);
+todosRouter.get('/', requireAccessToken, getTodos);
+todosRouter.get('/:id', requireAccessToken, getTodoById);
+todosRouter.post('/', requireAccessToken, createTodo);
+todosRouter.put('/:id', requireAccessToken, updateTodo);
+todosRouter.delete('/:id', requireAccessToken, deleteTodo);
