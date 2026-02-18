@@ -1,3 +1,4 @@
+import { Response, Request } from 'express';
 import {
   createTodoS,
   deleteTodoS,
@@ -6,16 +7,19 @@ import {
   updateTodoS,
 } from '@/services/todos/todos.service';
 import { AppError } from '@/utils/error/app-error.util';
-import { Request, Response } from 'express';
+import { Types } from 'mongoose';
+import { TodoQueryType } from '@/types/models/todo.type';
 
-// Get all todos with search, infinite scrolling, and status filter
-export const getTodos = async (req: Request, res: Response) => {
-  const userId = (req as any).account._id;
+// Get all todos
+export const getTodos = async (
+  req: Request & { query: TodoQueryType },
+  res: Response,
+) => {
+  const userId = req.user._id;
+
   const { search, cursor, limit, status } = req.query;
-  console.log('QUERY:', req.query);
 
-  const validStatus = status ? String(status) : undefined;
-  if (validStatus && !['pending', 'completed'].includes(validStatus)) {
+  if (status && !['pending', 'completed'].includes(status)) {
     throw new AppError(
       'Invalid status value. Must be "pending" or "completed".',
       400,
@@ -23,10 +27,10 @@ export const getTodos = async (req: Request, res: Response) => {
   }
 
   const query = {
-    search: search ? String(search) : undefined,
-    cursor: cursor ? String(cursor) : undefined,
+    search,
+    cursor,
     limit: limit ? Number(limit) : 10,
-    status: validStatus as 'pending' | 'completed' | undefined,
+    status,
   };
 
   const { todos, hasMore, nextCursor } = await getTodosS(userId, query);
@@ -40,10 +44,10 @@ export const getTodos = async (req: Request, res: Response) => {
   });
 };
 
-// Get a single todo by ID
+// Get one todo
 export const getTodoById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = (req as any).account._id;
+  const userId = req.user._id;
 
   if (!id) {
     throw new AppError('Todo ID is required.', 400);
@@ -61,10 +65,10 @@ export const getTodoById = async (req: Request, res: Response) => {
   });
 };
 
-// Create a new todo
+// Create todo
 export const createTodo = async (req: Request, res: Response) => {
   const { title, description } = req.body;
-  const userId = (req as any).account._id;
+  const userId = new Types.ObjectId(req.user._id);
 
   const trimmedTitle = title?.trim();
 
@@ -87,19 +91,19 @@ export const createTodo = async (req: Request, res: Response) => {
   });
 };
 
-// Update an existing todo
+// Update todo
 export const updateTodo = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, status, isPinned } = req.body;
-  const userId = (req as any).account._id;
+  const userId = req.user._id;
 
   if (!id) {
     throw new AppError('Todo ID is required.', 400);
   }
 
-  const todo = await getTodoByIdS(id as string, userId);
+  const existingTodo = await getTodoByIdS(id as string, userId);
 
-  if (!todo) {
+  if (!existingTodo) {
     throw new AppError('Todo not found.', 404);
   }
 
@@ -146,10 +150,10 @@ export const updateTodo = async (req: Request, res: Response) => {
   });
 };
 
-// Toggle pin/unpin a todo
+// Toggle pin
 export const togglePin = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = (req as any).user._id;
+  const userId = req.user._id;
 
   const todo = await getTodoByIdS(id as string, userId);
 
@@ -172,10 +176,10 @@ export const togglePin = async (req: Request, res: Response) => {
   });
 };
 
-// Delete a todo
+// Delete todo
 export const deleteTodo = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = (req as any).account._id;
+  const userId = req.user._id;
 
   if (!id) {
     throw new AppError('Todo ID is required.', 400);
@@ -184,7 +188,7 @@ export const deleteTodo = async (req: Request, res: Response) => {
   const todo = await getTodoByIdS(id as string, userId);
 
   if (!todo) {
-    throw new AppError('Failed to delete todo.', 400);
+    throw new AppError('Todo not found.', 404);
   }
 
   await deleteTodoS(id as string, userId);

@@ -84,7 +84,7 @@ export const login = async (req: Request, res: Response) => {
 
   // Compare the password with the hashed password in database
   const ok = await compareHashed(password, account.password);
-  if (!ok) throw new AppError('Incorrect password.', 400);
+  if (!ok) throw new AppError('Invalid Credentials.', 400);
 
   // Get uuid
   const sid = uuid();

@@ -1,17 +1,12 @@
 import { findAccountS } from '@/services/account/account.service';
-import { AccountDocumentType } from '@/types/models/account.type';
+import { AuthUser } from '@/types/models/account.type';
 import { AppError } from '@/utils/error/app-error.util';
 import { verifyAccessToken } from '@/utils/jwt/jwt.util';
 import type { NextFunction, Request, Response } from 'express';
 
-// Request extended with account
-export interface AuthedRequest extends Request {
-  account?: AccountDocumentType | null;
-}
-
 // Validates access token from Authorization header
 export const requireAccessToken = async (
-  req: AuthedRequest,
+  req: Request,
   _res: Response,
   next: NextFunction,
 ) => {
@@ -42,7 +37,11 @@ export const requireAccessToken = async (
     }
 
     // Attach account to request
-    req.account = account;
+    req.user = {
+      _id: account._id,
+      email: account.email,
+      username: account.username,
+    };
 
     // Continue request
     return next();
