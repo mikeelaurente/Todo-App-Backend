@@ -1,36 +1,36 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 // Libraries
-import expressMongoSanitize from '@exortek/express-mongo-sanitize';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import express from 'express';
-import helmet from 'helmet';
-import http from 'http';
-import morgan from 'morgan';
+import expressMongoSanitize from "@exortek/express-mongo-sanitize";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import express from "express";
+import helmet from "helmet";
+import http from "http";
+import morgan from "morgan";
 // Database
-import initDB from '@/db/db.connect.js';
+import initDB from "@/db/db.connect.js";
 // Middlewares
-import { globalErrorHandler } from '@/middlewares/global-error-handler.middleware';
-import { globalRateLimiter } from '@/middlewares/limiter.middleware';
+import { globalErrorHandler } from "@/middlewares/global-error-handler.middleware";
+import { globalRateLimiter } from "@/middlewares/limiter.middleware";
 // Routes
-import { accountRouter } from '@/routes/account/account.routes';
-import { authRouter } from '@/routes/auth/auth.routes';
-import { todosRouter } from '@/routes/todos/todos.routes';
-import { tokenRouter } from '@/routes/token/token.routes';
+import { accountRouter } from "@/routes/account/account.routes";
+import { authRouter } from "@/routes/auth/auth.routes";
+import { todosRouter } from "@/routes/todos/todos.routes";
+import { tokenRouter } from "@/routes/token/token.routes";
 
 const bootstrap = async () => {
   const app = express();
 
   const PORT = process.env.PORT || 5000;
   const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',')
+    ? process.env.CORS_ORIGINS.split(",")
     : [];
 
   // - local dev: false
   // - production behind 2 proxy: 2
-  const isProd = process.env.NODE_ENV === 'production';
-  app.set('trust proxy', isProd ? 2 : false);
+  const isProd = process.env.NODE_ENV === "production";
+  app.set("trust proxy", isProd ? 2 : false);
 
   // CORS
   app.use(
@@ -42,7 +42,7 @@ const bootstrap = async () => {
         }
 
         // Reject everything else
-        callback(new Error('CORS not allowed'), false);
+        callback(new Error("CORS not allowed"), false);
       },
       credentials: true,
     }),
@@ -55,7 +55,7 @@ const bootstrap = async () => {
   app.use(globalRateLimiter);
 
   // Logger
-  app.use(morgan('dev'));
+  app.use(morgan("dev"));
 
   // JSON parser
   app.use(express.json());
@@ -67,20 +67,20 @@ const bootstrap = async () => {
   app.use(cookieParser());
 
   // Test api
-  app.get('/api/test', (req, res) => {
-    res.status(200).send('Api is running');
+  app.get("/api/test", (req, res) => {
+    res.status(200).send("Api is running");
   });
 
   // Routes
-  app.use('/api/auth', authRouter);
-  app.use('/api/token', tokenRouter);
-  app.use('/api/account', accountRouter);
-  app.use('/api/todos', todosRouter);
+  app.use("/api/auth", authRouter);
+  app.use("/api/token", tokenRouter);
+  app.use("/api/account", accountRouter);
+  app.use("/api/todos", todosRouter);
 
   // 404 handler: Invalid route
   app.use((req, res) => {
     res.status(404).json({
-      message: 'Route Not Found',
+      message: "Route Not Found",
       path: req.originalUrl,
       method: req.method,
     });
@@ -99,6 +99,6 @@ const bootstrap = async () => {
 };
 
 bootstrap().catch((e) => {
-  console.error('Fatal boot error:', e);
+  console.error("Fatal boot error:", e);
   process.exit(1);
 });
