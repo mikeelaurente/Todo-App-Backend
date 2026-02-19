@@ -30,6 +30,19 @@ const TodoSchema = new Schema<TodoDocumentType>(
   },
 );
 
+// Add indexes for better query performance
+// Index for userId - used in every query
+TodoSchema.index({ userId: 1 });
+
+// Index for userId + status - used for status filtering
+TodoSchema.index({ userId: 1, status: 1 });
+
+// Text index for userId + title - used for search
+TodoSchema.index({ userId: 1, title: 'text' });
+
+// Compound index for sorting by isPinned, pinnedAt, and createdAt
+TodoSchema.index({ userId: 1, isPinned: -1, pinnedAt: 1, createdAt: -1 });
+
 const Todo: Model<TodoDocumentType> = model<
   TodoDocumentType,
   Model<TodoDocumentType>

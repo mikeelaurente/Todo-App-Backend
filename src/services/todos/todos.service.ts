@@ -27,8 +27,9 @@ export const getTodosS = async (
     filter.status = status;
   }
 
+  // Use text search instead of regex for better performance
   if (search) {
-    filter.title = { $regex: search, $options: 'i' };
+    filter.$text = { $search: search };
   }
 
   // If cursor exists, add it to the filter to get items after the cursor
