@@ -1,8 +1,7 @@
-import { findAccountS } from '@/services/account/account.service';
-import { AuthUser } from '@/types/models/account.type';
-import { AppError } from '@/utils/error/app-error.util';
-import { verifyAccessToken } from '@/utils/jwt/jwt.util';
-import type { NextFunction, Request, Response } from 'express';
+import { findAccountS } from "@/services/account/account.service";
+import { AppError } from "@/utils/error/app-error.util";
+import { verifyAccessToken } from "@/utils/jwt/jwt.util";
+import type { NextFunction, Request, Response } from "express";
 
 // Validates access token from Authorization header
 export const requireAccessToken = async (
@@ -14,26 +13,26 @@ export const requireAccessToken = async (
   const auth = req.headers.authorization;
 
   // Ensure Bearer token exists
-  if (!auth || !auth.startsWith('Bearer ')) {
-    return next(new AppError('Unauthorized: Missing access token.', 401));
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return next(new AppError("Unauthorized: Missing access token.", 401));
   }
 
   // Extract token
-  const token = auth.slice('Bearer '.length).trim();
+  const token = auth.slice("Bearer ".length).trim();
   try {
     // Verify token signature and expiry
     const payload = verifyAccessToken(token) as { sub: string };
 
     // Validate payload
     if (!payload?.sub) {
-      return next(new AppError('Unauthorized: Invalid access token.', 401));
+      return next(new AppError("Unauthorized: Invalid access token.", 401));
     }
 
     // Get the account from db
-    const account = await findAccountS({ _id: payload.sub }, 'email name');
+    const account = await findAccountS({ _id: payload.sub }, "email username");
 
     if (!account) {
-      return next(new AppError('Unauthorized: Account not found.', 401));
+      return next(new AppError("Unauthorized: Account not found.", 401));
     }
 
     // Attach account to request
@@ -48,7 +47,7 @@ export const requireAccessToken = async (
   } catch {
     // Handle invalid or expired token
     return next(
-      new AppError('Unauthorized: Invalid or expired access token.', 401),
+      new AppError("Unauthorized: Invalid or expired access token.", 401),
     );
   }
 };

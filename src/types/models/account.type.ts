@@ -1,5 +1,5 @@
-import { Document } from 'mongoose';
-import { Request } from 'express';
+import { Request } from "express";
+import { Document } from "mongoose";
 
 export type GeoType = {
   range: [number, number];
