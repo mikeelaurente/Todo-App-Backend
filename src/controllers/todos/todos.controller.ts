@@ -5,6 +5,7 @@ import {
   getTodoByIdS,
   getTodosS,
   updateTodoS,
+  getTotalPendingTodosS,
 } from '@/services/todos/todos.service';
 import { AppError } from '@/utils/error/app-error.util';
 import { Types } from 'mongoose';
@@ -34,6 +35,7 @@ export const getTodos = async (
   };
 
   const { todos, hasMore, nextCursor } = await getTodosS(userId, query);
+  const totalPendingTodo = await getTotalPendingTodosS(userId);
 
   res.status(200).json({
     message: 'Todos retrieved successfully.',
@@ -41,6 +43,7 @@ export const getTodos = async (
     hasMore,
     nextCursor,
     limit: query.limit,
+    totalPendingTodo,
   });
 };
 

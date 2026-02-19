@@ -92,3 +92,14 @@ export const deleteTodoS = async (id: string, userId: string) => {
     userId: new Types.ObjectId(userId),
   }).exec();
 };
+
+export const getTotalPendingTodosS = async (
+  userId: string,
+): Promise<number> => {
+  const count = await Todo.countDocuments({
+    userId: new Types.ObjectId(userId),
+    status: 'pending',
+  }).exec();
+
+  return count;
+};
