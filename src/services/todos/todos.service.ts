@@ -1,10 +1,10 @@
-import Todo from '@/models/todos/todos.model';
+import Todo from "@/models/todos/todos.model";
 import {
   TodoDocumentType,
   TodoQueryType,
   TodoType,
-} from '@/types/models/todo.type';
-import { Types } from 'mongoose';
+} from "@/types/models/todo.type";
+import { Types } from "mongoose";
 
 export const getTodosS = async (
   userId: string,
@@ -19,7 +19,7 @@ export const getTodosS = async (
   const status = query.status;
   const cursor = query.cursor;
 
-  const filter: Record<string, unknown> = {
+  const filter: Record<string, any> = {
     userId: new Types.ObjectId(userId),
   };
 
@@ -27,17 +27,23 @@ export const getTodosS = async (
     filter.status = status;
   }
 
-  // Use text search instead of regex for better performance
-  if (search) {
-    filter.$text = { $search: search };
+  function escapeRegex(text: string) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
-  // If cursor exists, add it to the filter to get items after the cursor
+  if (search) {
+    const safeSearch = escapeRegex(search);
+
+    filter.$or = [
+      { title: { $regex: safeSearch, $options: "i" } },
+      { description: { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
   if (cursor) {
     filter._id = { $lt: new Types.ObjectId(cursor) };
   }
 
-  // Fetch one extra item to determine if there are more items
   const todos = await Todo.find(filter)
     .sort({
       isPinned: -1,
@@ -83,7 +89,7 @@ export const updateTodoS = async (
       userId: new Types.ObjectId(userId),
     },
     data,
-    { returnDocument: 'after' },
+    { returnDocument: "after" },
   ).exec();
 };
 
@@ -99,7 +105,7 @@ export const getTotalPendingTodosS = async (
 ): Promise<number> => {
   const count = await Todo.countDocuments({
     userId: new Types.ObjectId(userId),
-    status: 'pending',
+    status: "pending",
   }).exec();
 
   return count;
