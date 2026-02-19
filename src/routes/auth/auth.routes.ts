@@ -15,5 +15,5 @@ authRouter.post("/login", login);
 authRouter.post("/logout", logout);
 
 authRouter.post("/forgot-password", sendOtpController);
-authRouter.post("/verify-reset-otp", verifyOtpController);
-authRouter.post("/reset-password", resetPasswordController);
+authRouter.post("/verify-reset-otp/:email", verifyOtpController);
+authRouter.post("/reset-password/:token", resetPasswordController);

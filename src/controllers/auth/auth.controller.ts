@@ -25,6 +25,7 @@ import {
 } from "@/utils/jwt/jwt.util";
 import { sendScheduleConfirmationEmail } from "@/utils/mailer/scheduleConfirmationEmail";
 import { buildSession } from "@/utils/session/session.util";
+import jwt from "jsonwebtoken";
 
 export const register = async (req: Request, res: Response) => {
   // Get the data from request body
@@ -169,18 +170,23 @@ export const sendOtpController = async (req: Request, res: Response) => {
   }
 };
 
-import jwt from "jsonwebtoken";
-
 export const verifyOtpController = async (req: Request, res: Response) => {
-  const { email, otp } = req.body;
+  const { email } = req.params;
+  const { otp } = req.body;
 
   try {
+    if (!email) {
+      throw new AppError("Email is required.", 400);
+    }
+
+    if (!otp) {
+      throw new AppError("OTP is required.", 400);
+    }
+
     const user = await Account.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      throw new AppError("User not found.", 404);
     }
 
     await verifyOtp(user._id, otp, "PASSWORD_RESET");
@@ -191,57 +197,59 @@ export const verifyOtpController = async (req: Request, res: Response) => {
       { expiresIn: "5m" },
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "OTP verified successfully",
       resetToken,
     });
-  } catch (error) {
-    console.log("Verify OTP error:", error);
-    res.status(400).json({
-      message: "Invalid or expired OTP",
+  } catch (error: any) {
+    console.error("Verify OTP error:", error.message);
+
+    return res.status(400).json({
+      message: error.message || "Invalid or expired OTP",
     });
   }
 };
 
 export const resetPasswordController = async (req: Request, res: Response) => {
+  const { token } = req.params;
   const { newPassword } = req.body;
 
   try {
+    if (!token) {
+      throw new AppError("Reset token is required.", 401);
+    }
+
     if (!newPassword) {
       throw new AppError("New password is required.", 400);
     }
 
-    const authHeader = req.headers.authorization;
+    const decoded = jwt.verify(
+      token as string,
+      process.env.JWT_RESET_PASSWORD_TOKEN as string,
+    );
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError("Reset token missing", 401);
+    if (typeof decoded !== "object" || !decoded || !("userId" in decoded)) {
+      throw new AppError("Invalid or expired reset token.", 401);
     }
 
-    const token = authHeader.split(" ")[1];
+    const userId = decoded.userId as string;
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_RESET_PASSWORD_TOKEN as string,
-    ) as {
-      userId: string;
-    };
-
-    const user = await Account.findById(decoded.userId);
+    const user = await Account.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      throw new AppError("User not found.", 404);
     }
 
     user.password = await hashedValue(newPassword);
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Password reset successfully",
     });
   } catch (error: any) {
-    console.log("Reset password error:", error.message);
+    console.error("Reset password error:", error.message);
 
-    res.status(400).json({
+    return res.status(400).json({
       message: error.message || "Invalid or expired reset token",
     });
   }

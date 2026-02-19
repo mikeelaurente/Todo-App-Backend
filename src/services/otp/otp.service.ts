@@ -6,7 +6,7 @@ export const generateOtp = async (
   userId: Types.ObjectId,
   type: "EMAIL_VERIFICATION" | "PASSWORD_RESET",
 ) => {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(10000, 100000).toString();
 
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
