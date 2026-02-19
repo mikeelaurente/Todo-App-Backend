@@ -34,17 +34,12 @@ export const verifyOtp = async (
     .update(inputOtp.trim())
     .digest("hex");
 
-  console.log("INPUT OTP:", inputOtp);
-  console.log("HASHED INPUT:", hashedInput);
-
   const otpDoc = await OTP.findOne({
     userId,
     code: hashedInput,
     type,
     expiresAt: { $gt: new Date() },
   });
-
-  console.log("FOUND OTP DOC:", otpDoc);
 
   if (!otpDoc) {
     throw new Error("Invalid or expired OTP");
