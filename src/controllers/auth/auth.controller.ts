@@ -23,7 +23,7 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "@/utils/jwt/jwt.util";
-import { sendScheduleConfirmationEmail } from "@/utils/mailer/scheduleConfirmationEmail";
+import { sendScheduleConfirmationEmail } from "@/utils/mailer/schedule-confirmation-email";
 import { buildSession } from "@/utils/session/session.util";
 import jwt from "jsonwebtoken";
 
